@@ -1,0 +1,14 @@
+{
+  "python": "3.14.10 (main, Nov  4 2026, 18:21:50) [GCC 16.2.1 20260810]",
+  "compiler": "g++ (GCC) 16.2.1 20260810",
+  "milp_seconds_per_phase": 2,
+  "milp_wall_timeout": 16,
+  "alns_iterations": 2000,
+  "alns_seeds": [
+    1,
+    2,
+    3
+  ],
+  "platform": "Linux-7.3.5-arch1-1-x86_64-with-glibc2.44",
+  "ortools": "9.15.6755"
+}

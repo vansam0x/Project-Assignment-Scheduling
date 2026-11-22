@@ -39,7 +39,7 @@ Nói cách khác, không được giảm số công việc để đổi lấy th
 | `Q + 2` | `d(1) d(2) ... d(N)` | Thời lượng của `N` công việc; `1 ≤ d(i) ≤ 1000`. |
 | `Q + 3` | `M` | Số đội; `1 ≤ M ≤ 500`. |
 | `Q + 4` | `s(1) s(2) ... s(M)` | Thời điểm sẵn sàng của `M` đội; `1 ≤ s(j) ≤ 1000`. |
-| `Q + 5` | `K` | Số cặp phân công hợp lệ; `1 ≤ K ≤ 1000000`. |
+| `Q + 5` | `K` | Số cặp phân công hợp lệ; `1 ≤ K ≤ 100000`. |
 | `Q + 6` đến `Q + 5 + K` | `i j c(i,j)` | Đội `j` có thể thực hiện công việc `i` với chi phí `c(i,j)`. |
 
 Chỉ những cặp công việc–đội được liệt kê trong `K` dòng cuối mới là các lựa chọn phân công hợp lệ. Đề gốc không nêu giới hạn giá trị của `c(i,j)`.
@@ -107,13 +107,10 @@ Chỉ những cặp công việc–đội được liệt kê trong `K` dòng cu
 - Các đội đều bắt đầu thực hiện công việc sau hoặc đúng thời điểm sẵn sàng.
 - Thời điểm hoàn thành toàn bộ lịch là **235**; tổng chi phí phân công là **145**.
 
-<!-- > Đây là đầu ra minh họa được chép từ đề, không phải khẳng định rằng lịch này tối ưu theo cả ba tiêu chí. -->
+## Mô hình và lời giải
 
-<!-- ## Quy ước sử dụng trong dự án
-
-Thống nhất sử dụng các giả định sau khi xây dựng mô hình tối ưu và thuật toán:
-
-1. **Mỗi đội chỉ thực hiện tối đa một công việc tại một thời điểm.** Một đội có thể thực hiện nhiều công việc nối tiếp nhau; công việc tiếp theo có thể bắt đầu ngay khi công việc trước kết thúc.
-2. **Một công việc chỉ được lập lịch nếu tất cả công việc tiền nhiệm của nó cũng được lập lịch và hoàn thành trước hoặc đúng thời điểm nó bắt đầu.** Vì vậy, nếu một công việc không được lập lịch thì mọi công việc phụ thuộc trực tiếp hoặc gián tiếp vào nó cũng không được lập lịch.
-
-Đây là các giả định bổ sung đã thống nhất cho dự án; phần mô tả gốc và test mẫu chưa đủ để xác nhận đầy đủ hai quy tắc này. -->
+- [Phát biểu mô hình toán học MILP](./solutions/milp/model.md): biến, ràng buộc, mục tiêu và mối liên hệ với phương pháp đơn hình.
+- [Lời giải bằng OR-Tools/SCIP](./solutions/milp/README.md): hướng dẫn chạy và kết quả kiểm chứng.
+- [ALNS bằng C++](./solutions/alns/README.md): thuật toán thích nghi destroy–repair và baseline tham lam.
+- [Bộ test và bộ sinh dữ liệu](./tests/README.md): kiểm tra nghiệm và tái lập thực nghiệm.
+- [Đánh giá MILP–ALNS](./tests/EVALUATION.md) và [bảng kết quả thực tế](./tests/results/report.md).
