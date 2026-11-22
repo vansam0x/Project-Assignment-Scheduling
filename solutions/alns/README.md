@@ -2,7 +2,7 @@
 
 Thuật toán sử dụng cùng quy ước với [mô hình MILP](../milp/model.md). Đây là heuristic cho hai tiêu chí cuối; không chứng minh tối ưu makespan hay chi phí.
 
-Xem thêm [các heuristic khác](../heuristics/README.md) và [kết quả so sánh dạng CSV](../../tests/heuristic_results/benchmark.csv).
+Xem thêm [các heuristic khác](../heuristics/README.md) và [kết quả so sánh dạng CSV](../../tests/results/heuristics.csv).
 
 ## Xác định tập công việc tối đa
 
@@ -43,11 +43,11 @@ Từ thư mục gốc dự án:
 ```bash
 g++ -std=c++17 -O2 -Wall -Wextra -pedantic solutions/alns/main.cpp -o solutions/alns/alns
 # Tham số lần lượt: số vòng lặp và seed
-solutions/alns/alns 2000 1 < tests/instances/sample.txt
+solutions/alns/alns 2000 1 < tests/data/small/sample.txt
 # Baseline tham lam, không chạy ALNS
-solutions/alns/alns 0 0 < tests/instances/sample.txt
+solutions/alns/alns 0 0 < tests/data/small/sample.txt
 ```
 
 Lịch xuất stdout theo đề bài, tóm tắt mục tiêu xuất stderr. Đầu vào dùng số nguyên và chỉ số hợp lệ như đề; chi phí/tổng thời gian phải nằm trong miền `long long` của C++. Bộ sinh test sử dụng chi phí nhỏ để tránh tràn số và giới hạn số học của bộ giải MILP.
 
-Xem [bộ thử](../../tests/README.md) và [kết quả thực nghiệm](../../tests/results/benchmark.csv).
+Xem [bộ thử](../../tests/README.md) và [kết quả thực nghiệm](../../tests/results/milp.csv).

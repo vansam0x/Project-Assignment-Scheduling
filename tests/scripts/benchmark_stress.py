@@ -3,13 +3,11 @@ import argparse
 import csv
 import hashlib
 import json
-from pathlib import Path
+from paths import PROJECT_ROOT, RESULTS_DIR, STRESS_DATA
 import subprocess
-import sys
 import time
 
-ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT/'tests'))
+ROOT=PROJECT_ROOT
 from check import read_instance,validate,maximum_count
 
 
@@ -20,14 +18,14 @@ def main():
     parser.add_argument('--timeout',type=float,default=30)
     args=parser.parse_args()
     if args.iterations<0 or args.timeout<=0:parser.error('Invalid budget')
-    folder=Path(__file__).resolve().parent
-    destination=folder/'results';destination.mkdir(exist_ok=True)
+    folder=STRESS_DATA
+    destination=RESULTS_DIR;destination.mkdir(exist_ok=True)
     manifest=json.loads((folder/'manifest.json').read_text())
     subprocess.run(['g++','-std=c++17','-O2','-Wall','-Wextra','-pedantic',
                     'solutions/alns/main.cpp','-o','solutions/alns/alns'],cwd=ROOT,check=True)
     rows=[]
     for entry in manifest:
-        path=folder/'instances'/entry['file'];raw=path.read_text()
+        path=folder/entry['file'];raw=path.read_text()
         assert hashlib.sha256(path.read_bytes()).hexdigest()==entry['sha256']
         data=read_instance(path);n,edges,d,m,s,costs=data
         assert (n,len(edges),m,len(costs))==(entry['n'],entry['q'],entry['m'],entry['k'])
@@ -56,7 +54,7 @@ def main():
                      seed=seed,iterations=iterations,order_variables=entry['order_variables'],status=status,count=count,makespan=span,cost=cost,seconds=round(elapsed,6))
             rows.append(row)
             print(f'{stem}: {status} ({count},{span},{cost}) {elapsed:.3f}s',flush=True)
-    with (destination/'benchmark.csv').open('w',newline='') as f:
+    with (destination/'stress.csv').open('w',newline='') as f:
         writer=csv.DictWriter(f,fieldnames=list(rows[0]), lineterminator="\n");writer.writeheader();writer.writerows(rows)
 
 if __name__=='__main__':main()

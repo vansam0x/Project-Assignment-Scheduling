@@ -1,13 +1,13 @@
 """Compare C++ scheduling heuristics against the same decoder and MILP references."""
 import argparse
 import csv
-from pathlib import Path
+from paths import PROJECT_ROOT, RESULTS_DIR, SMALL_DATA, STRESS_DATA
 import subprocess
 import time
 
 from check import read_instance, validate
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = PROJECT_ROOT
 ALGORITHMS = ('greedy', 'lpt', 'critical_path', 'multistart', 'sa', 'alns')
 RANDOMIZED = {'multistart', 'sa', 'alns'}
 
@@ -25,20 +25,20 @@ def main():
     binary = ROOT / 'solutions/heuristics/heuristics'
     subprocess.run(['g++', '-std=c++17', '-O2', '-Wall', '-Wextra', '-Wpedantic',
                     str(ROOT / 'solutions/heuristics/main.cpp'), '-o', str(binary)], check=True)
-    destination = ROOT / 'tests/heuristic_results'
+    destination = RESULTS_DIR
     destination.mkdir(exist_ok=True)
     references = {}
-    with (ROOT / 'tests/results/benchmark.csv').open() as stream:
+    with (RESULTS_DIR / 'milp.csv').open() as stream:
         for row in csv.DictReader(stream):
             if row['algorithm'] == 'milp' and row['status'] == 'optimal':
                 references[row['instance']] = tuple(int(row[key]) for key in ('count', 'makespan', 'cost'))
     instances = []
     if args.suite in ('small', 'all'):
-        instances.extend(('small', path) for path in sorted((ROOT / 'tests/instances').glob('*.txt')))
+        instances.extend(('small', path) for path in sorted(SMALL_DATA.glob('*.txt')))
     if args.suite in ('stress', 'all'):
-        instances.extend(('stress', path) for path in sorted((ROOT / 'tests/stress/instances').glob('*.txt')))
+        instances.extend(('stress', path) for path in sorted(STRESS_DATA.glob('*.txt')))
     if not instances:
-        parser.error('No instances found; run tests/generate.py first')
+        parser.error('No instances found; run tests/scripts/generate.py first')
     rows = []
     for suite, path in instances:
         data = read_instance(path)
@@ -69,7 +69,7 @@ def main():
                                  iterations=iterations, status=status, count=objective[0],
                                  makespan=objective[1], cost=objective[2], seconds=round(elapsed, 6)))
         print(f'{suite}/{path.stem}: completed all 6 algorithms', flush=True)
-    with (destination / 'benchmark.csv').open('w', newline='') as stream:
+    with (destination / 'heuristics.csv').open('w', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)

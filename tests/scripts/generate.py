@@ -3,21 +3,20 @@ import random
 import argparse
 import hashlib
 import json
-from pathlib import Path
+from paths import SMALL_DATA, STRESS_DATA
 
-ROOT = Path(__file__).resolve().parent
 
 def write(name, n, edges, d, releases, costs, destination=None):
     lines = [f'{n} {len(edges)}', *(f'{a+1} {b+1}' for a,b in edges),
              ' '.join(map(str,d)), str(len(releases)), ' '.join(map(str,releases)),
              str(len(costs)), *(f'{i+1} {j+1} {c}' for i,j,c in costs)]
-    path=(destination or ROOT/'instances')/f'{name}.txt'
+    path=(destination or SMALL_DATA)/f'{name}.txt'
     path.write_text('\n'.join(lines)+'\n')
     return path
 
 
 def generate_stress():
-    destination=ROOT/'stress/instances'
+    destination=STRESS_DATA
     destination.mkdir(parents=True,exist_ok=True)
     configs=[('scale200',200,200,20,2000,'dag'),
              ('scale500',500,500,100,10000,'dag'),
@@ -51,7 +50,7 @@ def generate_stress():
                                  expected_count=n,order_variables=order_vars,
                                  nonoverlap_constraints=2*order_vars,
                                  sha256=hashlib.sha256(path.read_bytes()).hexdigest()))
-    (destination.parent/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
+    (destination/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
@@ -59,7 +58,7 @@ def main():
     args=parser.parse_args()
     if args.suite in ('stress','all'):generate_stress()
     if args.suite=='stress':return
-    (ROOT/'instances').mkdir(exist_ok=True)
+    SMALL_DATA.mkdir(parents=True,exist_ok=True)
     write('cycle',3,[(0,1),(1,0),(1,2)],[2,3,4],[1],[(i,0,5) for i in range(3)])
     write('missing_team',3,[(0,1),(1,2)],[2,3,4],[1],[(1,0,2),(2,0,3)])
     write('single_team',4,[(0,3)],[2,4,3,1],[1],[(i,0,i+1) for i in range(4)])

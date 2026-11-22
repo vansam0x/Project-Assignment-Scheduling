@@ -34,12 +34,12 @@ Nói cách khác, không được giảm số công việc để đổi lấy th
 
 | Dòng | Nội dung | Ý nghĩa và giới hạn |
 | --- | --- | --- |
-| `1` | `N Q` | Số công việc và số quan hệ trước–sau; `1 ≤ N, Q ≤ 1000`. |
+| `1` | `N Q` | Số công việc và số quan hệ trước–sau; $1 \le N, Q \le 1000$. |
 | `2` đến `Q + 1` | `i j` | Mỗi dòng mô tả một quan hệ: công việc `i` phải hoàn thành trước khi công việc `j` bắt đầu. |
-| `Q + 2` | `d(1) d(2) ... d(N)` | Thời lượng của `N` công việc; `1 ≤ d(i) ≤ 1000`. |
-| `Q + 3` | `M` | Số đội; `1 ≤ M ≤ 500`. |
-| `Q + 4` | `s(1) s(2) ... s(M)` | Thời điểm sẵn sàng của `M` đội; `1 ≤ s(j) ≤ 1000`. |
-| `Q + 5` | `K` | Số cặp phân công hợp lệ; `1 ≤ K ≤ 100000`. |
+| `Q + 2` | `d(1) d(2) ... d(N)` | Thời lượng của `N` công việc; $1 \le d(i) \le 1000$. |
+| `Q + 3` | `M` | Số đội; $1 \le M \le 500$. |
+| `Q + 4` | `s(1) s(2) ... s(M)` | Thời điểm sẵn sàng của `M` đội; $1 \le s(j) \le 1000$. |
+| `Q + 5` | `K` | Số cặp phân công hợp lệ; $1 \le K \le 100000$. |
 | `Q + 6` đến `Q + 5 + K` | `i j c(i,j)` | Đội `j` có thể thực hiện công việc `i` với chi phí `c(i,j)`. |
 
 Chỉ những cặp công việc–đội được liệt kê trong `K` dòng cuối mới là các lựa chọn phân công hợp lệ. Đề gốc không nêu giới hạn giá trị của `c(i,j)`.
@@ -114,5 +114,5 @@ Chỉ những cặp công việc–đội được liệt kê trong `K` dòng cu
 - [ALNS bằng C++](./solutions/alns/README.md): thuật toán thích nghi destroy–repair và baseline tham lam.
 - [Các heuristic C++](./solutions/heuristics/README.md): LPT, Critical Path, multi-start, simulated annealing và ALNS.
 - [Bộ test và bộ sinh dữ liệu](./tests/README.md): kiểm tra nghiệm và tái lập thực nghiệm.
-- [Kết quả MILP/ALNS dạng CSV](./tests/results/benchmark.csv).
-- [Kết quả sáu heuristic dạng CSV](./tests/heuristic_results/benchmark.csv).
+- [Kết quả MILP/ALNS dạng CSV](./tests/results/milp.csv).
+- [Kết quả sáu heuristic dạng CSV](./tests/results/heuristics.csv).

@@ -3,11 +3,15 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+
+from paths import PROJECT_ROOT, SMALL_DATA
 from check import read_instance, validate
 from compare_heuristics import ALGORITHMS
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = PROJECT_ROOT
 
 
 class CppHeuristicTests(unittest.TestCase):
@@ -50,7 +54,7 @@ class CppHeuristicTests(unittest.TestCase):
                 self.assertEqual(result.stdout, '')
 
     def test_seed_reproducibility(self):
-        raw = (ROOT / 'tests/instances/medium_0.txt').read_text()
+        raw = (SMALL_DATA / 'medium_0.txt').read_text()
         for algorithm in ('multistart', 'sa', 'alns'):
             with self.subTest(algorithm=algorithm):
                 command = [str(self.binary), algorithm, '200', '9']

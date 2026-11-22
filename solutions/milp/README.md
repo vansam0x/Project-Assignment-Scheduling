@@ -4,13 +4,13 @@ Phần phát biểu toán học nằm trong [model.md](./model.md). Mô tả đ�
 
 Các lệnh bên dưới chạy từ thư mục gốc của dự án:
 
-Mã nguồn: [solve.py](./solve.py). Dữ liệu mẫu dùng chung: [sample.txt](../../tests/instances/sample.txt).
+Mã nguồn: [solve.py](./solve.py). Dữ liệu mẫu dùng chung: [sample.txt](../../tests/data/small/sample.txt).
 
 ```bash
 python -m pip install -r solutions/milp/requirements.txt
-python solutions/milp/solve.py < tests/instances/sample.txt
+python solutions/milp/solve.py < tests/data/small/sample.txt
 # Tùy chọn: giới hạn 60 giây cho mỗi pha tối ưu
-python solutions/milp/solve.py --time-limit 60 < tests/instances/sample.txt
+python solutions/milp/solve.py --time-limit 60 < tests/data/small/sample.txt
 ```
 
 Nếu dùng môi trường ảo đã tạo trong dự án, thay `python` bằng `.venv/bin/python`.
@@ -21,4 +21,4 @@ Lịch được in ra stdout theo định dạng đề bài; giá trị mục ti
 
 Mô hình có `N + K` biến chọn và thêm $\sum_j\binom{|A_j|}{2}$ biến thứ tự, trong đó $A_j$ là tập công việc đội j làm được. Vì vậy mô hình MILP theo cặp này phù hợp để học mô hình hóa và giải các trường hợp nhỏ/vừa, không bảo đảm xử lý được giới hạn lớn nhất của đề. Với dữ liệu lớn, nên cân nhắc CP-SAT với optional intervals và `NoOverlap` để tránh mở rộng toàn bộ cặp công việc.
 
-Xem [bộ test và lệnh benchmark](../../tests/README.md) và [kết quả CSV](../../tests/results/benchmark.csv).
+Xem [bộ test và lệnh benchmark](../../tests/README.md) và [kết quả CSV](../../tests/results/milp.csv).

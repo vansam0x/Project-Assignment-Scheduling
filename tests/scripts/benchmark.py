@@ -1,13 +1,13 @@
 """Reproducible subprocess benchmark, independent checks and CSV results."""
 import argparse
 import csv
-from pathlib import Path
+from paths import PROJECT_ROOT, RESULTS_DIR, SMALL_DATA
 import subprocess
 import sys
 import time
 from check import read_instance,validate
 
-ROOT=Path(__file__).resolve().parent.parent
+ROOT=PROJECT_ROOT
 
 def run(command, instance, timeout):
     begin=time.perf_counter()
@@ -25,13 +25,13 @@ def main():
     parser.add_argument('--iterations',type=int,default=2000)
     args=parser.parse_args()
     if args.milp_seconds<=0 or args.iterations<0:parser.error('Invalid budget')
-    destination=ROOT/'tests/results';destination.mkdir(exist_ok=True)
+    destination=RESULTS_DIR;destination.mkdir(exist_ok=True)
     subprocess.run(['g++','-std=c++17','-O2','-Wall','-Wextra','-pedantic',
                     'solutions/alns/main.cpp','-o','solutions/alns/alns'],cwd=ROOT,check=True)
     rows=[]
     expected={'sample':(5,235,145),'cycle':(0,0,0),'missing_team':(0,0,0),
               'single_team':(4,11,10),'priority':(1,3,10),'cost_tie':(1,3,-5)}
-    for instance in sorted((ROOT/'tests/instances').glob('*.txt')):
+    for instance in sorted(SMALL_DATA.glob('*.txt')):
         data=read_instance(instance)
         jobs=[('milp','', [sys.executable,'solutions/milp/solve.py','--time-limit',str(args.milp_seconds)],3*args.milp_seconds+10),
               ('greedy',0,['solutions/alns/alns','0','0'],30)]
@@ -57,7 +57,7 @@ def main():
         exact=next((r for r in rows if r['instance']==row['instance'] and r['algorithm']=='milp' and r['status']=='optimal'),None)
         if exact and row['status']=='feasible':
             assert (row['makespan'],row['cost']) >= (exact['makespan'],exact['cost'])
-    with (destination/'benchmark.csv').open('w',newline='') as f:
+    with (destination/'milp.csv').open('w',newline='') as f:
         writer=csv.DictWriter(f,fieldnames=list(rows[0]), lineterminator="\n");writer.writeheader();writer.writerows(rows)
 
 if __name__=='__main__':main()

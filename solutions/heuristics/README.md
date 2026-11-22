@@ -34,9 +34,9 @@ Từ thư mục gốc:
 ```bash
 g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic solutions/heuristics/main.cpp -o solutions/heuristics/heuristics
 # Tham số: thuật toán, số vòng lặp, seed
-solutions/heuristics/heuristics critical_path 0 0 < tests/instances/sample.txt
-solutions/heuristics/heuristics sa 2000 1 < tests/instances/sample.txt
-solutions/heuristics/heuristics alns 2000 1 < tests/instances/sample.txt
+solutions/heuristics/heuristics critical_path 0 0 < tests/data/small/sample.txt
+solutions/heuristics/heuristics sa 2000 1 < tests/data/small/sample.txt
+solutions/heuristics/heuristics alns 2000 1 < tests/data/small/sample.txt
 ```
 
 `greedy`, `lpt`, `critical_path` không dùng số vòng lặp hoặc seed. Lịch xuất stdout theo đề bài; tóm tắt thuật toán/mục tiêu xuất stderr. Cùng seed tái lập trong cùng môi trường C++/thư viện chuẩn; không hứa cùng chuỗi ngẫu nhiên giữa mọi thư viện chuẩn khác nhau.
@@ -46,12 +46,12 @@ Chi phí và tổng thời gian phải nằm trong miền `long long`, các phé
 ## So sánh và kiểm thử
 
 ```bash
-.venv/bin/python tests/test_cpp.py
-.venv/bin/python tests/compare_heuristics.py
+.venv/bin/python tests/unit/test_cpp.py
+.venv/bin/python tests/scripts/compare_heuristics.py
 # Chỉ chạy stress, tăng ngân sách tìm kiếm
-.venv/bin/python tests/compare_heuristics.py --suite stress --stress-iterations 2000
+.venv/bin/python tests/scripts/compare_heuristics.py --suite stress --stress-iterations 2000
 ```
 
-Mỗi lần so sánh ghi đè [benchmark.csv](../../tests/heuristic_results/benchmark.csv), chỉ ghi kết quả CSV; không sinh báo cáo Markdown, lịch riêng, log hoặc metadata. Bộ nhỏ mặc định 2000 vòng lặp, stress 200 vòng lặp. Thuật toán ngẫu nhiên chạy seed 1/2/3; các phương pháp tất định chỉ chạy một lần. Không chạy lại MILP mà dùng chứng minh đã lưu trong bộ benchmark hiện tại.
+Mỗi lần so sánh ghi đè [heuristics.csv](../../tests/results/heuristics.csv), chỉ ghi kết quả CSV; không sinh báo cáo Markdown, lịch riêng, log hoặc metadata. Bộ nhỏ mặc định 2000 vòng lặp, stress 200 vòng lặp. Thuật toán ngẫu nhiên chạy seed 1/2/3; các phương pháp tất định chỉ chạy một lần. Không chạy lại MILP mà dùng chứng minh đã lưu trong bộ benchmark hiện tại.
 
-Xem [kết quả đo thực tế dạng CSV](../../tests/heuristic_results/benchmark.csv).
+Xem [kết quả đo thực tế dạng CSV](../../tests/results/heuristics.csv).
