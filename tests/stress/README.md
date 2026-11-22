@@ -28,6 +28,8 @@ Từ thư mục gốc:
 
 Benchmark stress biên dịch C++, kiểm tra hash và các cận/đặc điểm dữ liệu, chạy greedy cùng ALNS ba seed, rồi kiểm tra độc lập mọi nghiệm. Timeout mặc định 30 giây mỗi lượt, đổi bằng `--timeout`. Đây là kiểm thử hoạt động với ngân sách 200 vòng lặp, khác ngân sách 2000 vòng trong bộ nhỏ. Tăng `--iterations` để đánh giá chất lượng sâu hơn.
 
-Xem [bảng kết quả](./results/report.md), [CSV](./results/benchmark.csv) và [cấu hình chạy](./results/metadata.json). Không ghi đè kết quả cũ của bộ nhỏ.
+Kết quả chỉ ghi vào [benchmark.csv](./results/benchmark.csv), không sinh báo cáo Markdown, lịch riêng, log hoặc metadata. Không ghi đè kết quả của bộ nhỏ.
+
+Kết quả sáu heuristic trên cùng dữ liệu nằm trong [CSV](../heuristic_results/benchmark.csv). Chạy `.venv/bin/python tests/compare_heuristics.py --suite stress` từ thư mục gốc để tái lập phần stress.
 
 MILP theo cặp có thể sinh hàng triệu biến thứ tự trên nhóm này. Benchmark stress hiện chỉ chạy greedy/ALNS và thống kê kích thước MILP; chưa đo kết quả MILP trên các test lớn. Giới hạn SCIP mỗi pha không giới hạn thời gian/RAM dựng mô hình, nên cần ngân sách tài nguyên riêng trước khi chạy toàn bộ MILP trên nhóm max_dense/max_chain.

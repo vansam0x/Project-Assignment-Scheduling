@@ -4,7 +4,6 @@ import csv
 import hashlib
 import json
 from pathlib import Path
-import platform
 import subprocess
 import sys
 import time
@@ -50,43 +49,14 @@ def main():
                 elapsed=time.perf_counter()-start
                 if result.returncode:raise RuntimeError(result.stderr)
                 count,span,cost=validate(data,result.stdout)
-                (destination/f'{stem}.out').write_text(result.stdout)
-                (destination/f'{stem}.log').write_text(result.stderr)
                 status='validated'
             except subprocess.TimeoutExpired:
                 elapsed=time.perf_counter()-start;count=span=cost='';status='timeout'
             row=dict(instance=path.stem,n=n,q=len(edges),m=m,k=len(costs),algorithm=algorithm,
-                     seed=seed,iterations=iterations,status=status,count=count,makespan=span,cost=cost,seconds=round(elapsed,6))
+                     seed=seed,iterations=iterations,order_variables=entry['order_variables'],status=status,count=count,makespan=span,cost=cost,seconds=round(elapsed,6))
             rows.append(row)
             print(f'{stem}: {status} ({count},{span},{cost}) {elapsed:.3f}s',flush=True)
     with (destination/'benchmark.csv').open('w',newline='') as f:
-        writer=csv.DictWriter(f,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
-    metadata=dict(python=sys.version,platform=platform.platform(),iterations=args.iterations,
-                  seeds=args.seeds,timeout=args.timeout,
-                  compiler=subprocess.check_output(['g++','--version'],text=True).splitlines()[0])
-    (destination/'metadata.json').write_text(json.dumps(metadata,indent=2)+'\n')
-    report=['# Kết quả stress test','',
-            f'ALNS: {args.iterations} vòng lặp, seed {args.seeds}; timeout mỗi lượt {args.timeout:g} giây.',
-            'Thời gian subprocess gồm đọc dữ liệu và khởi động; không gồm biên dịch hoặc kiểm tra nghiệm.',
-            'MILP không chạy trên nhóm này; số biến thứ tự được tính trực tiếp từ dữ liệu, không dựng mô hình.',
-            '', '| Test | N/Q/M/K | Biến thứ tự MILP | Greedy T | ALNS tốt nhất (T,C) | T ALNS min–max | ALNS giây TB |',
-            '| --- | --- | ---: | ---: | --- | --- | ---: |']
-    for entry in manifest:
-        name=Path(entry['file']).stem
-        group=[r for r in rows if r['instance']==name];greedy=group[0]
-        candidates=[r for r in group if r['algorithm']=='alns' and r['status']=='validated']
-        if candidates:
-            best=min(candidates,key=lambda r:(r['makespan'],r['cost']))
-            objective=f"({best['makespan']},{best['cost']})"
-            spread=f"{min(r['makespan'] for r in candidates)}–{max(r['makespan'] for r in candidates)}"
-            seconds=f"{sum(r['seconds'] for r in candidates)/len(candidates):.3f}"
-        else:objective=spread=seconds='timeout'
-        report.append(f"| {name} | {entry['n']}/{entry['q']}/{entry['m']}/{entry['k']} | {entry['order_variables']:,} | {greedy['makespan']} | {objective} | {spread} | {seconds} |")
-    passed=sum(r['status']=='validated' for r in rows)
-    report+=['',f'{passed}/{len(rows)} lượt xuất nghiệm đã qua kiểm tra độc lập, gồm xác nhận số công việc tối đa.',
-             'Chưa có chứng minh tối ưu makespan/chi phí. Best-of-seeds không đại diện cho giá trị trung bình.',
-             'Đây là smoke benchmark với ngân sách nhỏ; không dùng để kết luận ALNS đã hội tụ hoặc giải được mọi instance giới hạn lớn.',
-             '', 'Chi tiết: [benchmark.csv](./benchmark.csv), [metadata.json](./metadata.json), [manifest dữ liệu](../manifest.json).']
-    (destination/'report.md').write_text('\n'.join(report)+'\n')
+        writer=csv.DictWriter(f,fieldnames=list(rows[0]), lineterminator="\n");writer.writeheader();writer.writerows(rows)
 
 if __name__=='__main__':main()

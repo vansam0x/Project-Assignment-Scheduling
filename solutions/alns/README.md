@@ -2,6 +2,8 @@
 
 Thuật toán sử dụng cùng quy ước với [mô hình MILP](../milp/model.md). Đây là heuristic cho hai tiêu chí cuối; không chứng minh tối ưu makespan hay chi phí.
 
+Mã đã được tách theo OOP trong [scheduling.hpp](../common/scheduling.hpp); [main.cpp](./main.cpp) giữ giao diện chạy cũ. Xem [cấu trúc lớp và các heuristic bổ sung](../heuristics/README.md), cùng [bảng so sánh sáu phương pháp](../../tests/heuristic_results/benchmark.csv).
+
 ## Xác định tập công việc tối đa
 
 Loại các công việc không có đội và toàn bộ hậu duệ của chúng. Duyệt Kahn loại thêm công việc thuộc chu trình và hậu duệ của chu trình. Các công việc còn lại tạo thành DAG, có ít nhất một đội hợp lệ và chứa đủ tiền nhiệm. Do không có hạn chót, có thể xếp nối tiếp tất cả chúng theo thứ tự topo. Vì mọi công việc bị loại đều không thể xuất hiện trong nghiệm hợp lệ, tập còn lại là tập công việc tối đa và là duy nhất.
@@ -48,4 +50,4 @@ solutions/alns/alns 0 0 < tests/instances/sample.txt
 
 Lịch xuất stdout theo đề bài, tóm tắt mục tiêu xuất stderr. Đầu vào dùng số nguyên và chỉ số hợp lệ như đề; chi phí/tổng thời gian phải nằm trong miền `long long` của C++. Bộ sinh test sử dụng chi phí nhỏ để tránh tràn số và giới hạn số học của bộ giải MILP.
 
-Xem [bộ thử](../../tests/README.md) và [kết quả thực nghiệm](../../tests/results/report.md).
+Xem [bộ thử](../../tests/README.md) và [kết quả thực nghiệm](../../tests/results/benchmark.csv).
