@@ -112,7 +112,7 @@ Chỉ những cặp công việc–đội được liệt kê trong `K` dòng cu
 - [Phát biểu mô hình toán học MILP](./solutions/milp/model.md): biến, ràng buộc, mục tiêu và mối liên hệ với phương pháp đơn hình.
 - [Lời giải bằng OR-Tools/SCIP](./solutions/milp/README.md): hướng dẫn chạy và kết quả kiểm chứng.
 - [ALNS bằng C++](./solutions/alns/README.md): thuật toán thích nghi destroy–repair và baseline tham lam.
-- [Các heuristic C++](./solutions/heuristics/README.md): LPT, Critical Path, multi-start, simulated annealing và ALNS.
+- [Các heuristic C++](./solutions/heuristics/README.md): greedy, LPT, Critical Path, multi-start và simulated annealing.
 - [Bộ test và bộ sinh dữ liệu](./tests/README.md): kiểm tra nghiệm và tái lập thực nghiệm.
 - [Kết quả MILP/ALNS dạng CSV](./tests/results/milp.csv).
-- [Kết quả sáu heuristic dạng CSV](./tests/results/heuristics.csv).
+- [So sánh MILP với các heuristic và ALNS dạng CSV](./tests/results/heuristics.csv).

@@ -83,4 +83,4 @@ $$
 C=\sum_{(i,j)\in A}c_{ij}x_{ij}.
 $$
 
-Cách này bảo đảm ưu tiên từ điển, không cần chọn trọng số rất lớn cho hàm mục tiêu. Chỉ chuyển sang bước tiếp theo khi SCIP trả về `OPTIMAL`; giới hạn thời gian có thể khiến chương trình dừng với thông báo chưa chứng minh được tối ưu. SCIP sử dụng tính toán dấu phẩy động và dung sai số; dữ liệu chi phí cực lớn cần được đổi đơn vị phù hợp.
+Cách này bảo đảm ưu tiên từ điển, không cần chọn trọng số rất lớn cho hàm mục tiêu. Chỉ chuyển sang bước tiếp theo khi SCIP trả về `OPTIMAL`. Nếu hết thời gian, chương trình xuất nghiệm khả thi tốt nhất đã lưu và dừng, đánh dấu `feasible` thay vì khẳng định tối ưu. Cận và gap chỉ thuộc pha đang giải, không phải chứng minh cho toàn bộ ba mục tiêu. SCIP sử dụng tính toán dấu phẩy động và dung sai số; dữ liệu chi phí cực lớn cần được đổi đơn vị phù hợp.

@@ -15,7 +15,6 @@ public:
         if (algorithm == "critical_path") return priority(true);
         if (algorithm == "multistart") return multiStart(iterations);
         if (algorithm == "sa") return anneal(iterations);
-        if (algorithm == "alns") return alns(iterations);
         throw runtime_error("Unknown algorithm: " + algorithm);
     }
 
@@ -80,33 +79,6 @@ public:
         return best;
     }
 
-    Schedule alns(int iterations) {
-        Schedule current = greedy();
-        Schedule best = current;
-        vector<double> weights(9, 1.0);
-        for (int iteration = 0; iteration < iterations && !current.order.empty(); ++iteration) {
-            discrete_distribution<int> select(weights.begin(), weights.end());
-            const int operation = select(random_);
-            const int destroy = operation / 3;
-            const auto repair = static_cast<RepairPolicy>(operation % 3);
-            Schedule candidate = perturbAndRepair(current, destroy, repair);
-            double reward = 0.1;
-            if (candidate.betterThan(best)) {
-                best = candidate;
-                reward = 8.0;
-            }
-            if (candidate.betterThan(current)) {
-                current = candidate;
-                reward = max(reward, 4.0);
-            } else if (accept(candidate, current, best, iteration, iterations)) {
-                current = candidate;
-                reward = max(reward, 1.0);
-            }
-            weights[operation] = 0.9 * weights[operation] + 0.1 * reward;
-        }
-        return best;
-    }
-
 private:
     const Problem& problem_;
     mt19937 random_;
@@ -126,47 +98,6 @@ private:
                exp(-max(0.0, delta) / temperature);
     }
 
-    Cost assignmentCost(const Schedule& schedule, int job) const {
-        Cost cost = numeric_limits<Cost>::max();
-        for (const auto& option : problem_.options[job]) {
-            if (option.team == schedule.team[job]) cost = min(cost, option.cost);
-        }
-        return cost;
-    }
-
-    Schedule perturbAndRepair(const Schedule& current, int destroy, RepairPolicy repair) {
-        vector<int> removed = current.order;
-        if (destroy == 0) {
-            shuffle(removed.begin(), removed.end(), random_);
-        } else if (destroy == 1) {
-            stable_sort(removed.begin(), removed.end(), [&](int a, int b) {
-                return current.start[a] + problem_.duration[a] >
-                       current.start[b] + problem_.duration[b];
-            });
-        } else {
-            stable_sort(removed.begin(), removed.end(), [&](int a, int b) {
-                return assignmentCost(current, a) > assignmentCost(current, b);
-            });
-        }
-        const double fraction = 0.1 + 0.4 * (random_() % 1000) / 999.0;
-        const int count = max(1, static_cast<int>(current.order.size() * fraction));
-        removed.resize(count);
-        vector<bool> erased(problem_.jobCount, false);
-        vector<int> preferred = current.team;
-        vector<int> order;
-        for (int job : removed) {
-            erased[job] = true;
-            preferred[job] = -1;
-        }
-        for (int job : current.order) {
-            if (!erased[job]) order.push_back(job);
-        }
-        shuffle(removed.begin(), removed.end(), random_);
-        for (int job : removed) {
-            order.insert(order.begin() + random_() % (order.size() + 1), job);
-        }
-        return decoder_.decode(order, preferred, repair);
-    }
 };
 
 int main(int argc, char** argv) {

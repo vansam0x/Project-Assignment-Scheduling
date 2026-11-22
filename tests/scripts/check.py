@@ -34,7 +34,7 @@ def maximum_count(data):
     return len(visited-invalid)
 
 
-def validate(data, output):
+def validate(data, output, require_maximum=True):
     n,edges,d,m,s,costs=data
     numbers=list(map(int,output.split()))
     if not numbers:raise ValueError('Empty output')
@@ -54,7 +54,7 @@ def validate(data, output):
     for intervals in teams:
         intervals.sort()
         if any(a[1]>b[0] for a,b in zip(intervals,intervals[1:])):raise ValueError('Overlap')
-    if count!=maximum_count(data):raise ValueError('Not maximum job count')
+    if require_maximum and count!=maximum_count(data):raise ValueError('Not maximum job count')
     return count,span,total
 
 if __name__=='__main__':

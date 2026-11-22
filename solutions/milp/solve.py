@@ -1,6 +1,7 @@
 """Lexicographic MILP scheduling with OR-Tools/SCIP (integer input costs)."""
 
 import argparse
+import json
 import sys
 from itertools import combinations
 
@@ -33,7 +34,12 @@ def read_instance(stream):
     return n, edges, durations, m, releases, costs
 
 
-def solve(instance, time_limit=None):
+def solve(instance, time_limit=None, details=None):
+    if details is None:
+        details = {}
+    details.update(status="no_solution", phase="count", count_optimal=False,
+                   makespan_optimal=False, cost_optimal=False,
+                   objective_value=None, best_bound=None, relative_gap=None)
     n, edges, d, m, s, costs = instance
     solver = pywraplp.Solver.CreateSolver("SCIP")
     if solver is None:
@@ -70,36 +76,59 @@ def solve(instance, time_limit=None):
     total_cost = solver.Sum(c * x[pair] for pair, c in costs.items())
     phases = [("count", count, True), ("makespan", end, False),
               ("cost", total_cost, False)]
+    incumbent = None
     for name, objective, maximize in phases:
+        details["phase"] = name
         if maximize:
             solver.Maximize(objective)
         else:
             solver.Minimize(objective)
         status = solver.Solve()
-        if status != pywraplp.Solver.OPTIMAL:
-            raise RuntimeError(
-                f"Phase {name}: status={status}; optimality not proven. "
-                "No lexicographic optimum is reported. Increase/omit --time-limit."
-            )
+        if status not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
+            details.update(objective_value=None, best_bound=None, relative_gap=None)
+            if incumbent is not None and status == pywraplp.Solver.NOT_SOLVED:
+                details["status"] = "feasible"
+                return incumbent
+            raise RuntimeError(f"Phase {name}: status={status}; no usable incumbent")
+        # Snapshot before adding constraints: model changes invalidate solver values.
+        incumbent = [(i + 1, j + 1, round(u[i].solution_value()))
+                     for (i, j), var in sorted(x.items()) if var.solution_value() > 0.5]
+        values = {
+            "count": len(incumbent),
+            "makespan": max((start + d[i - 1] for i, j, start in incumbent), default=0),
+            "cost": sum(costs[i - 1, j - 1] for i, j, start in incumbent),
+        }
+        value = values[name]
+        bound = solver.Objective().BestBound()
+        details.update(status="feasible", objective_value=value, best_bound=bound,
+                       relative_gap=abs(value - bound) / max(1, abs(value)))
+        if status == pywraplp.Solver.FEASIBLE:
+            print(f"{name}: {value} (FEASIBLE, bound={bound})", file=sys.stderr)
+            return incumbent
         optimum = round(solver.Objective().Value())
+        details[f"{name}_optimal"] = True
         print(f"{name}: {optimum} (OPTIMAL)", file=sys.stderr)
         if name != "cost":
             solver.Add(objective == optimum)
-    return [(i + 1, j + 1, round(u[i].solution_value()))
-            for (i, j), var in sorted(x.items()) if var.solution_value() > 0.5]
+    details["status"] = "optimal"
+    return incumbent
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--time-limit", type=float, help="Seconds per optimization phase")
+    parser.add_argument("--time-limit", type=float, default=30,
+                        help="Seconds per optimization phase (default: 30)")
     args = parser.parse_args()
     if args.time_limit is not None and args.time_limit <= 0:
         parser.error("--time-limit must be positive")
+    details = {}
     try:
-        schedule = solve(read_instance(sys.stdin), args.time_limit)
+        schedule = solve(read_instance(sys.stdin), args.time_limit, details)
     except (ValueError, RuntimeError) as exc:
         print(str(exc), file=sys.stderr)
+        print("MILP_RESULT " + json.dumps(details), file=sys.stderr)
         return 1
+    print("MILP_RESULT " + json.dumps(details), file=sys.stderr)
     print(len(schedule))
     for row in schedule:
         print(*row)

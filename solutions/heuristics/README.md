@@ -11,7 +11,8 @@ Tất cả thuật toán sử dụng cùng [quy ước mô hình](../milp/model.
 | `critical_path` | Ưu tiên tổng thời lượng lớn nhất từ công việc tới một đỉnh kết thúc; chọn đội như greedy |
 | `multistart` | Khởi tạo bằng greedy, lặp xáo trộn thứ tự ưu tiên rồi dựng lại toàn bộ lịch; 1/3 vòng dùng chọn đội có nhiễu thời gian |
 | `sa` | Simulated annealing: đổi chỗ hai vị trí ưu tiên, bỏ lựa chọn đội của hai việc đó rồi giải mã lại; cho phép tạm nhận bước xấu |
-| `alns` | Phá hủy 10–50% thứ tự/lựa chọn đội rồi sửa; thích nghi trọng số của 9 tổ hợp destroy–repair |
+
+ALNS được triển khai riêng trong [chương trình ALNS](../alns/README.md), không thuộc CLI heuristic này.
 
 Với `critical_path`, điểm ưu tiên được tính ngược thứ tự topo:
 
@@ -36,7 +37,6 @@ g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic solutions/heuristics/main.cpp -o sol
 # Tham số: thuật toán, số vòng lặp, seed
 solutions/heuristics/heuristics critical_path 0 0 < tests/data/small/sample.txt
 solutions/heuristics/heuristics sa 2000 1 < tests/data/small/sample.txt
-solutions/heuristics/heuristics alns 2000 1 < tests/data/small/sample.txt
 ```
 
 `greedy`, `lpt`, `critical_path` không dùng số vòng lặp hoặc seed. Lịch xuất stdout theo đề bài; tóm tắt thuật toán/mục tiêu xuất stderr. Cùng seed tái lập trong cùng môi trường C++/thư viện chuẩn; không hứa cùng chuỗi ngẫu nhiên giữa mọi thư viện chuẩn khác nhau.
@@ -52,6 +52,6 @@ Chi phí và tổng thời gian phải nằm trong miền `long long`, các phé
 .venv/bin/python tests/scripts/compare_heuristics.py --suite stress --stress-iterations 2000
 ```
 
-Mỗi lần so sánh ghi đè [heuristics.csv](../../tests/results/heuristics.csv), chỉ ghi kết quả CSV; không sinh báo cáo Markdown, lịch riêng, log hoặc metadata. Bộ nhỏ mặc định 2000 vòng lặp, stress 200 vòng lặp. Thuật toán ngẫu nhiên chạy seed 1/2/3; các phương pháp tất định chỉ chạy một lần. Không chạy lại MILP mà dùng chứng minh đã lưu trong bộ benchmark hiện tại.
+Script so sánh gọi năm heuristic trong chương trình này và ALNS từ chương trình riêng, đồng thời ghép các dòng MILP từ [milp.csv](../../tests/results/milp.csv). Mỗi lần chạy ghi đè [heuristics.csv](../../tests/results/heuristics.csv), chỉ ghi kết quả CSV; không sinh báo cáo Markdown, lịch riêng, log hoặc metadata. Bộ nhỏ mặc định 2000 vòng lặp, stress 200 vòng lặp. Thuật toán ngẫu nhiên chạy seed 1/2/3; các phương pháp tất định chỉ chạy một lần. Chạy benchmark MILP với 30 giây mỗi pha trước khi so sánh để cập nhật nghiệm. Các dòng MILP `feasible` chưa có chứng minh tối ưu; với stress chưa chạy MILP, ghi `not_run`.
 
 Xem [kết quả đo thực tế dạng CSV](../../tests/results/heuristics.csv).

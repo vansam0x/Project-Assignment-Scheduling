@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from paths import PROJECT_ROOT, SMALL_DATA
 from check import read_instance, validate
-from compare_heuristics import ALGORITHMS
+from compare_heuristics import COMPARISON_ALGORITHMS
 
 ROOT = PROJECT_ROOT
 
@@ -21,6 +21,15 @@ class CppHeuristicTests(unittest.TestCase):
         cls.binary = ROOT / '.build/test-heuristics'
         subprocess.run(['g++', '-std=c++17', '-O2', '-Wall', '-Wextra', '-Wpedantic',
                         str(ROOT / 'solutions/heuristics/main.cpp'), '-o', str(cls.binary)], check=True)
+
+        cls.alns_binary = ROOT / '.build/test-alns'
+        subprocess.run(['g++', '-std=c++17', '-O2', '-Wall', '-Wextra', '-Wpedantic',
+                        str(ROOT / 'solutions/alns/main.cpp'), '-o', str(cls.alns_binary)], check=True)
+
+    def command(self, algorithm, iterations=100, seed=7):
+        if algorithm == 'alns':
+            return [str(self.alns_binary), str(iterations), str(seed)]
+        return [str(self.binary), algorithm, str(iterations), str(seed)]
 
     def test_known_objectives(self):
         cases = [
@@ -38,9 +47,9 @@ class CppHeuristicTests(unittest.TestCase):
             for raw, expected in cases:
                 path.write_text(raw)
                 data = read_instance(path)
-                for algorithm in ALGORITHMS:
+                for algorithm in COMPARISON_ALGORITHMS:
                     with self.subTest(algorithm=algorithm, expected=expected):
-                        output = subprocess.run([str(self.binary), algorithm, '100', '7'], input=raw,
+                        output = subprocess.run(self.command(algorithm), input=raw,
                                                 text=True, capture_output=True, check=True).stdout
                         self.assertEqual(validate(data, output), expected)
 
@@ -48,16 +57,24 @@ class CppHeuristicTests(unittest.TestCase):
         for raw in ('', '2 1\n1 3\n', '1 0\n0\n', '1 0\n2\n0\n',
                     '1 0\n2\n1\n1\n1\n1 2 5\n'):
             with self.subTest(raw=raw):
-                result = subprocess.run([str(self.binary), 'alns'], input=raw,
+                result = subprocess.run(self.command('greedy'), input=raw,
                                         text=True, capture_output=True)
                 self.assertEqual(result.returncode, 2)
                 self.assertEqual(result.stdout, '')
+
+    def test_alns_is_not_in_heuristics(self):
+        raw = (SMALL_DATA / 'sample.txt').read_text()
+        result = subprocess.run([str(self.binary), 'alns'], input=raw,
+                                text=True, capture_output=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('Unknown algorithm: alns', result.stderr)
+        self.assertEqual(result.stdout, '')
 
     def test_seed_reproducibility(self):
         raw = (SMALL_DATA / 'medium_0.txt').read_text()
         for algorithm in ('multistart', 'sa', 'alns'):
             with self.subTest(algorithm=algorithm):
-                command = [str(self.binary), algorithm, '200', '9']
+                command = self.command(algorithm, 200, 9)
                 first = subprocess.run(command, input=raw, text=True, capture_output=True, check=True)
                 second = subprocess.run(command, input=raw, text=True, capture_output=True, check=True)
                 self.assertEqual(first.stdout, second.stdout)
