@@ -1,21 +1,123 @@
 #include "../common/scheduling.hpp"
 
+using namespace std;
+using namespace scheduling;
+
+class AlnsSolver {
+public:
+    AlnsSolver(const Problem& problem, unsigned seed)
+        : problem_(problem), random_(seed), decoder_(problem, random_),
+          unassigned_(problem.jobCount, -1) {}
+
+    Schedule alns(int iterations) {
+        Schedule current = greedy();
+        Schedule best = current;
+        vector<double> weights(9, 1.0);
+        for (int iteration = 0; iteration < iterations && !current.order.empty(); ++iteration) {
+            discrete_distribution<int> select(weights.begin(), weights.end());
+            const int operation = select(random_);
+            const int destroy = operation / 3;
+            const auto repair = static_cast<RepairPolicy>(operation % 3);
+            Schedule candidate = perturbAndRepair(current, destroy, repair);
+            double reward = 0.1;
+            if (candidate.betterThan(best)) {
+                best = candidate;
+                reward = 8.0;
+            }
+            if (candidate.betterThan(current)) {
+                current = candidate;
+                reward = max(reward, 4.0);
+            } else if (accept(candidate, current, best, iteration, iterations)) {
+                current = candidate;
+                reward = max(reward, 1.0);
+            }
+            weights[operation] = 0.9 * weights[operation] + 0.1 * reward;
+        }
+        return best;
+    }
+
+private:
+    const Problem& problem_;
+    mt19937 random_;
+    ScheduleDecoder decoder_;
+    vector<int> unassigned_;
+
+    Schedule greedy() {
+        return decoder_.decode(problem_.topologicalOrder, unassigned_);
+    }
+
+    bool accept(const Schedule& candidate, const Schedule& current, const Schedule& best,
+                int iteration, int iterations) {
+        const double temperature = max(
+            0.01, best.makespan * 0.05 * (1.0 - double(iteration) / max(1, iterations)));
+        double delta = double(candidate.makespan) - double(current.makespan);
+        if (delta == 0) {
+            delta = (double(candidate.cost) - double(current.cost)) /
+                    max(1.0, abs(double(current.cost)));
+        }
+        return uniform_real_distribution<double>(0, 1)(random_) <
+               exp(-max(0.0, delta) / temperature);
+    }
+
+    Cost assignmentCost(const Schedule& schedule, int job) const {
+        Cost cost = numeric_limits<Cost>::max();
+        for (const auto& option : problem_.options[job]) {
+            if (option.team == schedule.team[job]) cost = min(cost, option.cost);
+        }
+        return cost;
+    }
+
+    Schedule perturbAndRepair(const Schedule& current, int destroy, RepairPolicy repair) {
+        vector<int> removed = current.order;
+        if (destroy == 0) {
+            shuffle(removed.begin(), removed.end(), random_);
+        } else if (destroy == 1) {
+            stable_sort(removed.begin(), removed.end(), [&](int a, int b) {
+                return current.start[a] + problem_.duration[a] >
+                       current.start[b] + problem_.duration[b];
+            });
+        } else {
+            stable_sort(removed.begin(), removed.end(), [&](int a, int b) {
+                return assignmentCost(current, a) > assignmentCost(current, b);
+            });
+        }
+        const double fraction = 0.1 + 0.4 * (random_() % 1000) / 999.0;
+        const int count = max(1, static_cast<int>(current.order.size() * fraction));
+        removed.resize(count);
+        vector<bool> erased(problem_.jobCount, false);
+        vector<int> preferred = current.team;
+        vector<int> order;
+        for (int job : removed) {
+            erased[job] = true;
+            preferred[job] = -1;
+        }
+        for (int job : current.order) {
+            if (!erased[job]) order.push_back(job);
+        }
+        shuffle(removed.begin(), removed.end(), random_);
+        for (int job : removed) {
+            order.insert(order.begin() + random_() % (order.size() + 1), job);
+        }
+        return decoder_.decode(order, preferred, repair);
+    }
+};
+
 int main(int argc, char** argv) {
     try {
-        const int iterations = argc > 1 ? std::stoi(argv[1]) : 5000;
-        const unsigned seed = argc > 2 ? std::stoul(argv[2]) : 1;
+        const int iterations = argc > 1 ? stoi(argv[1]) : 5000;
+        const unsigned seed = argc > 2 ? stoul(argv[2]) : 1;
         if (iterations < 0 || argc > 3) {
-            throw std::runtime_error("Usage: alns [iterations >= 0] [seed]");
+            throw runtime_error("Usage: alns [iterations >= 0] [seed]");
         }
-        const auto problem = scheduling::Problem::read(std::cin);
-        scheduling::AlnsSolver solver(problem, seed);
-        const auto schedule = solver.solve(iterations);
-        schedule.write(std::cout);
-        std::cerr << "count=" << schedule.order.size() << " makespan=" << schedule.makespan
+        const auto problem = Problem::read(cin);
+        AlnsSolver solver(problem, seed);
+        const auto schedule = solver.alns(iterations);
+        schedule.write(cout);
+        cerr << "count=" << schedule.order.size() << " makespan=" << schedule.makespan
                   << " cost=" << schedule.cost << " seed=" << seed
                   << " iterations=" << iterations << '\n';
-    } catch (const std::exception& error) {
-        std::cerr << error.what() << '\n';
+    } catch (const exception& error) {
+        cerr << error.what() << '\n';
         return 2;
     }
     return 0;

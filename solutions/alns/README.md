@@ -2,7 +2,7 @@
 
 Thuật toán sử dụng cùng quy ước với [mô hình MILP](../milp/model.md). Đây là heuristic cho hai tiêu chí cuối; không chứng minh tối ưu makespan hay chi phí.
 
-Mã đã được tách theo OOP trong [scheduling.hpp](../common/scheduling.hpp); [main.cpp](./main.cpp) giữ giao diện chạy cũ. Xem [cấu trúc lớp và các heuristic bổ sung](../heuristics/README.md), cùng [bảng so sánh sáu phương pháp](../../tests/heuristic_results/benchmark.csv).
+Xem thêm [các heuristic khác](../heuristics/README.md) và [kết quả so sánh dạng CSV](../../tests/heuristic_results/benchmark.csv).
 
 ## Xác định tập công việc tối đa
 

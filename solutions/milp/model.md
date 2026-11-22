@@ -73,8 +73,14 @@ $$
 
 ### Ba lần giải theo thứ tự ưu tiên
 
-1. Tối đa $R=\sum_i y_i$, thu được $R^*$.
-2. Thêm $\sum_i y_i=R^*$, tối thiểu $T$, thu được $T^*$.
-3. Giữ hai giá trị trên, tối thiểu $C=\sum_{(i,j)\in A}c_{ij}x_{ij}$.
+1. Tối đa số công việc `R = sum(y_i)`, thu được giá trị tối ưu `R_opt`.
+2. Thêm ràng buộc `sum(y_i) = R_opt`, tối thiểu thời điểm hoàn thành `T`, thu được giá trị tối ưu `T_opt`.
+3. Giữ hai ràng buộc `sum(y_i) = R_opt` và `T = T_opt`, tối thiểu tổng chi phí phân công `C`.
+
+Ở đây, `sum(y_i)` là tổng các biến chọn công việc. Tổng chi phí được tính như sau:
+
+$$
+C=\sum_{(i,j)\in A}c_{ij}x_{ij}.
+$$
 
 Cách này bảo đảm ưu tiên từ điển, không cần chọn trọng số rất lớn cho hàm mục tiêu. Chỉ chuyển sang bước tiếp theo khi SCIP trả về `OPTIMAL`; giới hạn thời gian có thể khiến chương trình dừng với thông báo chưa chứng minh được tối ưu. SCIP sử dụng tính toán dấu phẩy động và dung sai số; dữ liệu chi phí cực lớn cần được đổi đơn vị phù hợp.

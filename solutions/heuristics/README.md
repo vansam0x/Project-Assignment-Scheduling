@@ -25,18 +25,6 @@ trong đó giá trị max của tập rỗng bằng 0, chỉ xét các việc đ
 
 SA dùng cùng công thức nhiệt độ và chấp nhận như [ALNS](../alns/README.md). Các lịch ưu tiên sau đổi chỗ hoặc xáo trộn được bộ giải mã sửa theo tiền nhiệm; luôn có lịch hợp lệ. Mọi phương pháp tìm kiếm giữ nghiệm tốt nhất từ greedy, nên không trả về nghiệm kém hơn greedy. Riêng hai phương pháp ưu tiên `lpt` và `critical_path` dựng một lịch độc lập, có thể kém greedy.
 
-## Cấu trúc OOP
-
-Mã dùng chung nằm trong [scheduling.hpp](../common/scheduling.hpp):
-
-- `Problem`: đọc/kiểm tra dữ liệu, xây đồ thị, xác định tập công việc hợp lệ tối đa.
-- `Schedule`: lưu lịch, so sánh mục tiêu và xuất kết quả.
-- `ScheduleDecoder`: giải mã thứ tự ưu tiên và lựa chọn đội, bảo đảm thời gian sẵn sàng/tiền nhiệm/không chồng lấn.
-- `HeuristicSolver`: lớp cơ sở, giữ RNG, decoder và quy tắc chấp nhận simulated annealing.
-- `GreedySolver`, `PrioritySolver`, `MultiStartSolver`, `SimulatedAnnealingSolver`, `AlnsSolver`: các chiến lược giải.
-
-[main.cpp](./main.cpp) chỉ chọn chiến lược, đọc tham số và xuất kết quả. [CLI ALNS cũ](../alns/main.cpp) tiếp tục hỗ trợ thứ tự tham số cũ. Toàn bộ mã C++ dùng thụt lề bốn dấu cách, tên mô tả rõ, có namespace và cấu hình [clang-format](../../.clang-format).
-
 Bộ giải mã hiện chỉ nối việc vào cuối lịch đội, không chèn vào khoảng trống. Đây là hạn chế chung khi so sánh các chiến lược, đồng thời là hướng cải tiến riêng cho sau này.
 
 ## Biên dịch và chạy
