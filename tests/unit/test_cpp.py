@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from paths import PROJECT_ROOT, SMALL_DATA
 from check import read_instance, validate
+from build_cpp import build_cpp
 from compare_heuristics import COMPARISON_ALGORITHMS
 
 ROOT = PROJECT_ROOT
@@ -17,14 +18,9 @@ ROOT = PROJECT_ROOT
 class CppHeuristicTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        (ROOT / '.build').mkdir(exist_ok=True)
-        cls.binary = ROOT / '.build/test-heuristics'
-        subprocess.run(['g++', '-std=c++17', '-O2', '-Wall', '-Wextra', '-Wpedantic',
-                        str(ROOT / 'solutions/heuristics/main.cpp'), '-o', str(cls.binary)], check=True)
-
-        cls.alns_binary = ROOT / '.build/test-alns'
-        subprocess.run(['g++', '-std=c++17', '-O2', '-Wall', '-Wextra', '-Wpedantic',
-                        str(ROOT / 'solutions/alns/main.cpp'), '-o', str(cls.alns_binary)], check=True)
+        binaries = build_cpp('heuristics', 'alns')
+        cls.binary = binaries['heuristics']
+        cls.alns_binary = binaries['alns']
 
     def command(self, algorithm, iterations=100, seed=7):
         if algorithm == 'alns':

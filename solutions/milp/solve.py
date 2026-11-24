@@ -2,7 +2,9 @@
 
 import argparse
 import json
+import signal
 import sys
+import time
 from itertools import combinations
 
 from ortools.linear_solver import pywraplp
@@ -34,12 +36,24 @@ def read_instance(stream):
     return n, edges, durations, m, releases, costs
 
 
-def solve(instance, time_limit=None, details=None):
+class ModelBuildTimeout(RuntimeError):
+    pass
+
+
+def solve(instance, time_limit=None, details=None, on_progress=None, total_limit=None):
     if details is None:
         details = {}
-    details.update(status="no_solution", phase="count", count_optimal=False,
+    details.update(status="no_solution", phase="build", count_optimal=False,
                    makespan_optimal=False, cost_optimal=False,
-                   objective_value=None, best_bound=None, relative_gap=None)
+                   objective_value=None, best_bound=None, relative_gap=None,
+                   build_seconds=None, solve_seconds=0.0, solver_status=None)
+    build_started = time.perf_counter()
+
+    def notify(schedule=None):
+        if on_progress is not None:
+            on_progress(details.copy(), schedule)
+
+    notify()
     n, edges, d, m, s, costs = instance
     solver = pywraplp.Solver.CreateSolver("SCIP")
     if solver is None:
@@ -76,19 +90,35 @@ def solve(instance, time_limit=None, details=None):
     total_cost = solver.Sum(c * x[pair] for pair, c in costs.items())
     phases = [("count", count, True), ("makespan", end, False),
               ("cost", total_cost, False)]
+    details["build_seconds"] = time.perf_counter() - build_started
     incumbent = None
     for name, objective, maximize in phases:
-        details["phase"] = name
+        details.update(phase=name, objective_value=None, best_bound=None, relative_gap=None,
+                       solver_status=None)
+        notify()
         if maximize:
             solver.Maximize(objective)
         else:
             solver.Minimize(objective)
+        if total_limit is not None:
+            remaining = total_limit - (time.perf_counter() - build_started)
+            if remaining <= 0:
+                if incumbent is not None:
+                    details["status"] = "feasible"
+                    return incumbent
+                raise RuntimeError("Total time limit reached without an incumbent")
+            solver.SetTimeLimit(max(1, int(remaining * 1000)))
+        phase_started = time.perf_counter()
         status = solver.Solve()
+        details["solver_status"] = status
+        details["solve_seconds"] += time.perf_counter() - phase_started
         if status not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
             details.update(objective_value=None, best_bound=None, relative_gap=None)
             if incumbent is not None and status == pywraplp.Solver.NOT_SOLVED:
                 details["status"] = "feasible"
                 return incumbent
+            details["status"] = ("no_solution" if status == pywraplp.Solver.NOT_SOLVED
+                                 else "solver_error")
             raise RuntimeError(f"Phase {name}: status={status}; no usable incumbent")
         # Snapshot before adding constraints: model changes invalidate solver values.
         incumbent = [(i + 1, j + 1, round(u[i].solution_value()))
@@ -104,9 +134,11 @@ def solve(instance, time_limit=None, details=None):
                        relative_gap=abs(value - bound) / max(1, abs(value)))
         if status == pywraplp.Solver.FEASIBLE:
             print(f"{name}: {value} (FEASIBLE, bound={bound})", file=sys.stderr)
+            notify(incumbent)
             return incumbent
         optimum = round(solver.Objective().Value())
         details[f"{name}_optimal"] = True
+        notify(incumbent)
         print(f"{name}: {optimum} (OPTIMAL)", file=sys.stderr)
         if name != "cost":
             solver.Add(objective == optimum)
@@ -118,16 +150,71 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--time-limit", type=float, default=30,
                         help="Seconds per optimization phase (default: 30)")
+    parser.add_argument("--deadline", type=float, help=argparse.SUPPRESS)
+    parser.add_argument("--total-time-limit", type=float, help="Shared seconds for construction and all phases")
+    parser.add_argument("--build-time-limit", type=float,
+                        help="Seconds allowed for model construction (Linux)")
+    parser.add_argument("--memory-limit-mb", type=int,
+                        help="Child-process address-space limit in MiB (Linux)")
+    parser.add_argument("--progress", action="store_true", help="Emit progress for benchmark recovery")
     args = parser.parse_args()
+    if args.total_time_limit is not None and args.total_time_limit <= 0:
+        parser.error("--total-time-limit must be positive")
     if args.time_limit is not None and args.time_limit <= 0:
         parser.error("--time-limit must be positive")
+    if args.build_time_limit is not None and args.build_time_limit <= 0:
+        parser.error("--build-time-limit must be positive")
+    if args.memory_limit_mb is not None and args.memory_limit_mb <= 0:
+        parser.error("--memory-limit-mb must be positive")
+    import resource
+    if args.memory_limit_mb is not None:
+        memory_bytes = args.memory_limit_mb * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_AS, (memory_bytes, memory_bytes))
     details = {}
+    started = time.perf_counter()
+
+    def build_timeout(signum, frame):
+        raise ModelBuildTimeout("Model construction exceeded its time limit")
+
+    deadline = args.deadline
+    if deadline is None and args.total_time_limit is not None:
+        deadline = time.monotonic() + args.total_time_limit
+    build_budget = args.build_time_limit
+    if deadline is not None:
+        remaining = max(0.001, deadline - time.monotonic())
+        build_budget = remaining if build_budget is None else min(build_budget, remaining)
+    if build_budget is not None:
+        signal.signal(signal.SIGALRM, build_timeout)
+
+    def progress(state, schedule):
+        if build_budget is not None:
+            signal.setitimer(signal.ITIMER_REAL,
+                             build_budget if state["phase"] == "build" else 0)
+        if args.progress:
+            print("MILP_PROGRESS " + json.dumps({"details": state, "schedule": schedule}),
+                  file=sys.stderr, flush=True)
+
     try:
-        schedule = solve(read_instance(sys.stdin), args.time_limit, details)
-    except (ValueError, RuntimeError) as exc:
+        instance = read_instance(sys.stdin)
+        total_limit = args.total_time_limit
+        if deadline is not None:
+            total_limit = max(0.001, deadline - time.monotonic())
+        schedule = solve(instance, args.time_limit, details, progress, total_limit)
+    except (ValueError, RuntimeError, MemoryError) as exc:
+        if isinstance(exc, ModelBuildTimeout):
+            details["status"] = "build_timeout"
+        elif isinstance(exc, MemoryError):
+            details["status"] = "memory_limit"
+        if details.get("phase") == "build":
+            details["build_seconds"] = time.perf_counter() - started
+        details["peak_rss_mb"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
         print(str(exc), file=sys.stderr)
-        print("MILP_RESULT " + json.dumps(details), file=sys.stderr)
+        print("MILP_RESULT " + json.dumps(details), file=sys.stderr, flush=True)
         return 1
+    finally:
+        if build_budget is not None:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+    details["peak_rss_mb"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
     print("MILP_RESULT " + json.dumps(details), file=sys.stderr)
     print(len(schedule))
     for row in schedule:

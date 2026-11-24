@@ -1,5 +1,52 @@
 # Project Assignment and Scheduling
 
+So sánh mô hình MILP bằng OR-Tools/SCIP với ALNS và các heuristic trên cùng dữ liệu, từ test nhỏ đến giới hạn lớn của đề. Kết quả thực nghiệm được lưu dưới dạng CSV.
+
+## Cấu trúc thư mục
+
+```text
+Project-Assignment-Scheduling/
+├── CMakeLists.txt                # Build hai chương trình C++17
+├── README.md
+├── solutions/
+│   ├── common/
+│   │   └── scheduling.hpp       # Dữ liệu và bộ giải mã lịch dùng chung
+│   ├── alns/
+│   │   ├── main.cpp             # Thuật toán ALNS
+│   │   └── README.md
+│   ├── heuristics/
+│   │   ├── main.cpp             # Greedy, LPT, Critical Path, multi-start, SA
+│   │   └── README.md
+│   └── milp/
+│       ├── solve.py             # OR-Tools/SCIP
+│       ├── model.md             # Phát biểu mô hình toán
+│       ├── requirements.txt
+│       └── README.md
+├── tests/
+│   ├── data/
+│   │   ├── small/               # Mẫu đề và test nhỏ
+│   │   └── stress/              # Test lớn và manifest dữ liệu
+│   ├── scripts/                 # Sinh test, build, kiểm tra và benchmark
+│   ├── unit/                    # Kiểm thử tự động
+│   ├── results/                 # Kết quả CSV của lần chạy gần nhất
+│   └── README.md
+└── .build/                      # Binary và file build do CMake sinh, bỏ qua Git
+```
+
+## Build và chạy
+
+Cần CMake từ 3.16 và GCC hỗ trợ C++17. Cấu hình build nằm trong [CMakeLists.txt](./CMakeLists.txt).
+
+```bash
+cmake -S . -B .build -DCMAKE_BUILD_TYPE=Release
+cmake --build .build --parallel
+
+.build/alns 2000 1 < tests/data/small/sample.txt
+.build/heuristics sa 2000 1 < tests/data/small/sample.txt
+```
+
+Các script benchmark và kiểm thử tự build target cần thiết qua CMake, không cần biên dịch thủ công. Phần MILP dùng Python và [các thư viện riêng](./solutions/milp/requirements.txt). Xem [hướng dẫn kiểm thử](./tests/README.md) để chạy bộ dữ liệu và lưu kết quả CSV.
+
 ## Bài toán phân công và lập lịch dự án
 
 Một dự án gồm **N công việc**, đánh số từ `1` đến `N`, cần được thực hiện bởi **M đội**, đánh số từ `1` đến `M`.
@@ -114,5 +161,5 @@ Chỉ những cặp công việc–đội được liệt kê trong `K` dòng cu
 - [ALNS bằng C++](./solutions/alns/README.md): thuật toán thích nghi destroy–repair và baseline tham lam.
 - [Các heuristic C++](./solutions/heuristics/README.md): greedy, LPT, Critical Path, multi-start và simulated annealing.
 - [Bộ test và bộ sinh dữ liệu](./tests/README.md): kiểm tra nghiệm và tái lập thực nghiệm.
-- [Kết quả MILP/ALNS dạng CSV](./tests/results/milp.csv).
-- [So sánh MILP với các heuristic và ALNS dạng CSV](./tests/results/heuristics.csv).
+- [Hướng dẫn đọc bảng so sánh và kết quả CSV](./tests/README.md#file-kết-quả).
+- [Thư mục kết quả](./tests/results/): luôn chứa kết quả của lần chạy gần nhất.

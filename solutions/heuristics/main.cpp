@@ -3,11 +3,21 @@
 using namespace std;
 using namespace scheduling;
 
+void checkpoint(const Schedule& schedule) {
+    if (!getenv("SCHEDULING_PROGRESS")) return;
+    cerr << "SCHEDULE_BEGIN\n";
+    schedule.write(cerr);
+    cerr << "SCHEDULE_END\n" << flush;
+}
+
 class Scheduler {
 public:
-    Scheduler(const Problem& problem, unsigned seed)
+    Scheduler(const Problem& problem, unsigned seed, double seconds = 0)
         : problem_(problem), random_(seed), decoder_(problem, random_),
-          unassigned_(problem.jobCount, -1) {}
+          unassigned_(problem.jobCount, -1), seconds_(seconds),
+          started_(chrono::steady_clock::now()) {
+        if (const char* value = getenv("SCHEDULING_DEADLINE")) deadline_ = stod(value);
+    }
 
     Schedule solve(const string& algorithm, int iterations) {
         if (algorithm == "greedy") return greedy();
@@ -46,13 +56,18 @@ public:
 
     Schedule multiStart(int iterations) {
         Schedule best = greedy();
+        checkpoint(best);
         vector<int> order = problem_.topologicalOrder;
-        for (int iteration = 0; iteration < iterations && !order.empty(); ++iteration) {
+        for (int iteration = 0; iteration < iterations && !order.empty() && !expired();
+             ++iteration) {
             shuffle(order.begin(), order.end(), random_);
             const auto policy = iteration % 3 == 0 ? RepairPolicy::RandomizedFinish
                                                    : RepairPolicy::EarliestFinish;
             Schedule candidate = decoder_.decode(order, unassigned_, policy);
-            if (candidate.betterThan(best)) best = move(candidate);
+            if (candidate.betterThan(best)) {
+                best = move(candidate);
+                checkpoint(best);
+            }
         }
         return best;
     }
@@ -60,7 +75,9 @@ public:
     Schedule anneal(int iterations) {
         Schedule current = greedy();
         Schedule best = current;
-        for (int iteration = 0; iteration < iterations && !current.order.empty(); ++iteration) {
+        checkpoint(best);
+        for (int iteration = 0; iteration < iterations && !current.order.empty() && !expired();
+             ++iteration) {
             vector<int> order = current.order;
             vector<int> preferred = current.team;
             const auto a = random_() % order.size();
@@ -70,7 +87,10 @@ public:
             preferred[order[b]] = -1;
             const auto policy = static_cast<RepairPolicy>(random_() % 3);
             Schedule candidate = decoder_.decode(order, preferred, policy);
-            if (candidate.betterThan(best)) best = candidate;
+            if (candidate.betterThan(best)) {
+                best = candidate;
+                checkpoint(best);
+            }
             if (candidate.betterThan(current) ||
                 accept(candidate, current, best, iteration, iterations)) {
                 current = move(candidate);
@@ -84,11 +104,28 @@ private:
     mt19937 random_;
     ScheduleDecoder decoder_;
     vector<int> unassigned_;
+    double seconds_;
+    double deadline_ = 0;
+    chrono::steady_clock::time_point started_;
+
+    double elapsed() const {
+        return chrono::duration<double>(chrono::steady_clock::now() - started_).count();
+    }
+
+    bool expired() const {
+        if (deadline_ > 0) {
+            timespec now;
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            if (now.tv_sec + now.tv_nsec * 1e-9 >= deadline_) return true;
+        }
+        return seconds_ > 0 && elapsed() >= seconds_;
+    }
 
     bool accept(const Schedule& candidate, const Schedule& current, const Schedule& best,
                 int iteration, int iterations) {
-        const double temperature = max(
-            0.01, best.makespan * 0.05 * (1.0 - double(iteration) / max(1, iterations)));
+        const double progress = seconds_ > 0 ? min(1.0, elapsed() / seconds_)
+                                            : double(iteration) / max(1, iterations);
+        const double temperature = max(0.01, best.makespan * 0.05 * (1.0 - progress));
         double delta = double(candidate.makespan) - double(current.makespan);
         if (delta == 0) {
             delta = (double(candidate.cost) - double(current.cost)) /
@@ -102,8 +139,8 @@ private:
 
 int main(int argc, char** argv) {
     try {
-        if (argc < 2 || argc > 4) {
-            throw runtime_error("Usage: heuristics algorithm [iterations >= 0] [seed]");
+        if (argc < 2 || argc > 5) {
+            throw runtime_error("Usage: heuristics algorithm [iterations >= 0] [seed] [seconds > 0]");
         }
         const string algorithm = argv[1];
         const int iterations = argc > 2 ? stoi(argv[2]) : 2000;
@@ -111,8 +148,10 @@ int main(int argc, char** argv) {
         if (iterations < 0) {
             throw runtime_error("Iterations must be nonnegative");
         }
+        const double seconds = argc > 4 ? stod(argv[4]) : 0;
+        if (argc > 4 && seconds <= 0) throw runtime_error("Seconds must be positive");
         const auto problem = Problem::read(cin);
-        Scheduler solver(problem, seed);
+        Scheduler solver(problem, seed, seconds);
         const auto schedule = solver.solve(algorithm, iterations);
         schedule.write(cout);
         cerr << "algorithm=" << algorithm << " count=" << schedule.order.size()

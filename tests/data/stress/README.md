@@ -21,15 +21,23 @@ Từ thư mục gốc:
 
 ```bash
 .venv/bin/python tests/scripts/generate.py --suite stress
-.venv/bin/python tests/scripts/benchmark_stress.py --iterations 200 --seeds 1 2 3
+.venv/bin/python tests/scripts/benchmark_stress.py --time-limit 30 --memory-mb 2048 --seeds 1 2 3
 ```
 
 `tests/scripts/generate.py` mặc định sinh cả bộ nhỏ và stress (`--suite all`); dùng `--suite small` để chỉ sinh bộ nhỏ. Sinh lại ghi đè dữ liệu do bộ sinh quản lý, không sửa mẫu đề.
 
-Benchmark stress biên dịch C++, kiểm tra hash và các cận/đặc điểm dữ liệu, chạy greedy cùng ALNS ba seed, rồi kiểm tra độc lập mọi nghiệm. Timeout mặc định 30 giây mỗi lượt, đổi bằng `--timeout`. Đây là kiểm thử hoạt động với ngân sách 200 vòng lặp, khác ngân sách 2000 vòng trong bộ nhỏ. Tăng `--iterations` để đánh giá chất lượng sâu hơn.
+Benchmark kiểm tra hash và các cận dữ liệu, rồi chạy MILP, greedy, LPT, critical path, multistart, SA và ALNS trên cả 12 instance. Không bỏ test theo số biến dự kiến; mọi nghiệm đều được kiểm tra độc lập.
 
-Kết quả chỉ ghi vào [stress.csv](../../results/stress.csv), không sinh báo cáo Markdown, lịch riêng, log hoặc metadata. Không ghi đè kết quả của bộ nhỏ.
+Ngân sách chung cho mỗi thuật toán và mỗi seed trên Linux:
 
-Kết quả sáu heuristic trên cùng dữ liệu nằm trong [heuristics.csv](../../results/heuristics.csv). Chạy `.venv/bin/python tests/scripts/compare_heuristics.py --suite stress` từ thư mục gốc để tái lập phần stress.
+- `--time-limit 30`: tổng 30 giây cho tiến trình, gồm khởi động, đọc dữ liệu, dựng mô hình và giải. MILP dùng thời gian còn lại cho ba pha; các phương pháp tìm kiếm lặp tới hạn, có chừa thời gian xuất nghiệm. Các phương pháp dựng lịch được phép kết thúc sớm.
+- `--memory-mb 2048`: tối đa 2048 MiB không gian địa chỉ (`RLIMIT_AS`), áp dụng trước khi khởi động mọi tiến trình con; không phải RSS.
+- `--seeds 1 2 3`: ba lượt độc lập cho ALNS, SA và multistart. Các phương pháp tất định chỉ chạy một lần.
 
-MILP theo cặp có thể sinh hàng triệu biến thứ tự trên nhóm này. Benchmark stress hiện chỉ chạy greedy/ALNS và thống kê kích thước MILP; chưa đo kết quả MILP trên các test lớn. Giới hạn SCIP mỗi pha không giới hạn thời gian/RAM dựng mô hình, nên cần ngân sách tài nguyên riêng trước khi chạy toàn bộ MILP trên nhóm max_dense/max_chain.
+Các lượt chạy tuần tự để không cộng dồn bộ nhớ. Ví dụ muốn tăng ngân sách, sửa thành `--time-limit 60 --memory-mb 4096` trong cùng lệnh. Biên dịch và kiểm tra nghiệm không nằm trong ngân sách thuật toán.
+
+`wall_timeout`, `memory_limit`, `process_error` ghi nguyên nhân dừng; ô mục tiêu trống nếu chưa có nghiệm, không thay bằng 0. Bộ chạy khôi phục nghiệm tốt nhất đã xuất hoàn chỉnh khi bị ngắt, rồi kiểm tra nghiệm đó. Cận/gap MILP chỉ thuộc pha đang giải, không phải toàn bộ ba mục tiêu.
+
+Kết quả được ghi sau mỗi lượt trong thư mục đợt chạy riêng: `runs.csv`, `comparison.csv`, `timing.csv` và `config.csv`. Xem [hướng dẫn kết quả](../../README.md#file-kết-quả). CSV cũ được giữ nguyên, không cập nhật hoặc trộn với lần chạy mới.
+
+Kết quả OR-Tools ở đây thuộc mô hình MILP theo cặp dùng SCIP. Thời gian dựng mô hình và giới hạn tài nguyên là một phần của phép đo, không đại diện cho mọi mô hình hay bộ giải khác trong OR-Tools.

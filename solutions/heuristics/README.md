@@ -33,10 +33,11 @@ Bộ giải mã hiện chỉ nối việc vào cuối lịch đội, không chè
 Từ thư mục gốc:
 
 ```bash
-g++ -std=c++17 -O2 -Wall -Wextra -Wpedantic solutions/heuristics/main.cpp -o solutions/heuristics/heuristics
+cmake -S . -B .build -DCMAKE_BUILD_TYPE=Release
+cmake --build .build --target heuristics --parallel
 # Tham số: thuật toán, số vòng lặp, seed
-solutions/heuristics/heuristics critical_path 0 0 < tests/data/small/sample.txt
-solutions/heuristics/heuristics sa 2000 1 < tests/data/small/sample.txt
+.build/heuristics critical_path 0 0 < tests/data/small/sample.txt
+.build/heuristics sa 2000 1 < tests/data/small/sample.txt
 ```
 
 `greedy`, `lpt`, `critical_path` không dùng số vòng lặp hoặc seed. Lịch xuất stdout theo đề bài; tóm tắt thuật toán/mục tiêu xuất stderr. Cùng seed tái lập trong cùng môi trường C++/thư viện chuẩn; không hứa cùng chuỗi ngẫu nhiên giữa mọi thư viện chuẩn khác nhau.
@@ -49,9 +50,9 @@ Chi phí và tổng thời gian phải nằm trong miền `long long`, các phé
 .venv/bin/python tests/unit/test_cpp.py
 .venv/bin/python tests/scripts/compare_heuristics.py
 # Chỉ chạy stress, tăng ngân sách tìm kiếm
-.venv/bin/python tests/scripts/compare_heuristics.py --suite stress --stress-iterations 2000
+.venv/bin/python tests/scripts/compare_heuristics.py --suite stress --time-limit 60 --memory-mb 4096
 ```
 
-Script so sánh gọi năm heuristic trong chương trình này và ALNS từ chương trình riêng, đồng thời ghép các dòng MILP từ [milp.csv](../../tests/results/milp.csv). Mỗi lần chạy ghi đè [heuristics.csv](../../tests/results/heuristics.csv), chỉ ghi kết quả CSV; không sinh báo cáo Markdown, lịch riêng, log hoặc metadata. Bộ nhỏ mặc định 2000 vòng lặp, stress 200 vòng lặp. Thuật toán ngẫu nhiên chạy seed 1/2/3; các phương pháp tất định chỉ chạy một lần. Chạy benchmark MILP với 30 giây mỗi pha trước khi so sánh để cập nhật nghiệm. Các dòng MILP `feasible` chưa có chứng minh tối ưu; với stress chưa chạy MILP, ghi `not_run`.
+Script chạy lại MILP, năm heuristic và ALNS với cùng `--time-limit` (mặc định tổng 30 giây) và `--memory-mb` (mặc định 2048 MiB không gian địa chỉ) cho mỗi lượt. Chỉ cần một lệnh; không cần chạy MILP trước. ALNS, SA và multistart tìm kiếm theo thời gian, dùng seed 1/2/3; các phương pháp tất định chạy một lần và có thể kết thúc sớm. Kết quả của mỗi lần gọi được ghi trực tiếp vào [tests/results/](../../tests/results/README.md), gồm `config.csv`, `runs.csv`, `comparison.csv` và `timing.csv`; lần chạy mới ghi đè kết quả cũ. Trong chế độ giới hạn thời gian, cùng seed không bảo đảm cùng kết quả vì số vòng hoàn thành phụ thuộc tốc độ máy.
 
-Xem [kết quả đo thực tế dạng CSV](../../tests/results/heuristics.csv).
+Xem [kết quả đo thực tế dạng CSV](../../tests/results/).

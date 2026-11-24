@@ -80,6 +80,12 @@ class MilpTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Not maximum'):
             validate(self.instance, '0\n')
 
+    def test_abnormal_solver_exit_is_not_a_timeout(self):
+        with self.assertRaisesRegex(RuntimeError, 'no usable incumbent'):
+            self.solve_with_statuses([milp.pywraplp.Solver.ABNORMAL])
+        self.assertEqual(self.details['status'], 'solver_error')
+        self.assertEqual(self.details['solver_status'], milp.pywraplp.Solver.ABNORMAL)
+
 
 if __name__ == '__main__':
     unittest.main()

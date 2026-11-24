@@ -3,17 +3,29 @@
 using namespace std;
 using namespace scheduling;
 
+void checkpoint(const Schedule& schedule) {
+    if (!getenv("SCHEDULING_PROGRESS")) return;
+    cerr << "SCHEDULE_BEGIN\n";
+    schedule.write(cerr);
+    cerr << "SCHEDULE_END\n" << flush;
+}
+
 class AlnsSolver {
 public:
-    AlnsSolver(const Problem& problem, unsigned seed)
+    AlnsSolver(const Problem& problem, unsigned seed, double seconds = 0)
         : problem_(problem), random_(seed), decoder_(problem, random_),
-          unassigned_(problem.jobCount, -1) {}
+          unassigned_(problem.jobCount, -1), seconds_(seconds),
+          started_(chrono::steady_clock::now()) {
+        if (const char* value = getenv("SCHEDULING_DEADLINE")) deadline_ = stod(value);
+    }
 
     Schedule alns(int iterations) {
         Schedule current = greedy();
         Schedule best = current;
+        checkpoint(best);
         vector<double> weights(9, 1.0);
-        for (int iteration = 0; iteration < iterations && !current.order.empty(); ++iteration) {
+        for (int iteration = 0; iteration < iterations && !current.order.empty() && !expired();
+             ++iteration) {
             discrete_distribution<int> select(weights.begin(), weights.end());
             const int operation = select(random_);
             const int destroy = operation / 3;
@@ -22,6 +34,7 @@ public:
             double reward = 0.1;
             if (candidate.betterThan(best)) {
                 best = candidate;
+                checkpoint(best);
                 reward = 8.0;
             }
             if (candidate.betterThan(current)) {
@@ -41,6 +54,22 @@ private:
     mt19937 random_;
     ScheduleDecoder decoder_;
     vector<int> unassigned_;
+    double seconds_;
+    double deadline_ = 0;
+    chrono::steady_clock::time_point started_;
+
+    double elapsed() const {
+        return chrono::duration<double>(chrono::steady_clock::now() - started_).count();
+    }
+
+    bool expired() const {
+        if (deadline_ > 0) {
+            timespec now;
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            if (now.tv_sec + now.tv_nsec * 1e-9 >= deadline_) return true;
+        }
+        return seconds_ > 0 && elapsed() >= seconds_;
+    }
 
     Schedule greedy() {
         return decoder_.decode(problem_.topologicalOrder, unassigned_);
@@ -48,8 +77,9 @@ private:
 
     bool accept(const Schedule& candidate, const Schedule& current, const Schedule& best,
                 int iteration, int iterations) {
-        const double temperature = max(
-            0.01, best.makespan * 0.05 * (1.0 - double(iteration) / max(1, iterations)));
+        const double progress = seconds_ > 0 ? min(1.0, elapsed() / seconds_)
+                                            : double(iteration) / max(1, iterations);
+        const double temperature = max(0.01, best.makespan * 0.05 * (1.0 - progress));
         double delta = double(candidate.makespan) - double(current.makespan);
         if (delta == 0) {
             delta = (double(candidate.cost) - double(current.cost)) /
@@ -106,11 +136,13 @@ int main(int argc, char** argv) {
     try {
         const int iterations = argc > 1 ? stoi(argv[1]) : 5000;
         const unsigned seed = argc > 2 ? stoul(argv[2]) : 1;
-        if (iterations < 0 || argc > 3) {
-            throw runtime_error("Usage: alns [iterations >= 0] [seed]");
+        if (iterations < 0 || argc > 4) {
+            throw runtime_error("Usage: alns [iterations >= 0] [seed] [seconds > 0]");
         }
+        const double seconds = argc > 3 ? stod(argv[3]) : 0;
+        if (argc > 3 && seconds <= 0) throw runtime_error("Seconds must be positive");
         const auto problem = Problem::read(cin);
-        AlnsSolver solver(problem, seed);
+        AlnsSolver solver(problem, seed, seconds);
         const auto schedule = solver.alns(iterations);
         schedule.write(cout);
         cerr << "count=" << schedule.order.size() << " makespan=" << schedule.makespan
